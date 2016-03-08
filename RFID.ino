@@ -3,7 +3,7 @@
 
 uint8_t RFIDResetPin = 13;
 
-// software serial #1: TX = digital pin 10, RX = digital pin 11
+// software serial #1: TX = digital pin 2, RX = digital pin 3
 SoftwareSerial rfid(2, 3);
 
 void printTag(char tag[]) {
