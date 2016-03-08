@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 2.8.4)
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/ArduinoToolchain.cmake)
+set(PROJECT_NAME RFID)
+project(${PROJECT_NAME})
+set(${CMAKE_PROJECT_NAME}_SKETCH RFID.ino)
+set(nano.build.mcu  "atmega328p")
+set(nano.upload.protocol stk500)
+set(nano.upload.maximum_size 30720)
+set(nano.upload.speed 57600)
+set(${CMAKE_PROJECT_NAME}_BOARD nano)
+set(${CMAKE_PROJECT_NAME}_PORT COM3)
+
+generate_arduino_firmware(${CMAKE_PROJECT_NAME})
