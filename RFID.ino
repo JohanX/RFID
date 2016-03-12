@@ -1,71 +1,56 @@
 #include <Arduino.h>
-#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
-uint8_t RFIDResetPin = 13;
+#define RST_PIN         9          // Configurable, see typical pin layout above
+#define SS_PIN          10         // Configurable, see typical pin layout above
 
-// software serial #1: TX = digital pin 2, RX = digital pin 3
-SoftwareSerial rfid(2, 3);
+MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
-void printTag(char tag[]) {
-    Serial.print("Read tag: ");
-    Serial.println(tag); //read out any unknown tag
-}
+bool checkValidUID(MFRC522::Uid *uid);
 
-void resetReader() {
-///////////////////////////////////
-//Reset the RFID reader to read again.
-///////////////////////////////////
-    digitalWrite(RFIDResetPin, LOW);
-    digitalWrite(RFIDResetPin, HIGH);
-    delay(150);
-}
+byte validUID[][4] = {
+    {0x14, 0x4D, 0xE5, 0x6A},
+    {0x93, 0xB6, 0x98, 0xAC},
+};
 
-void clearTag(char one[]) {
-///////////////////////////////////
-//clear the char array by filling with null - ASCII 0
-//Will think same tag has been read otherwise
-///////////////////////////////////
-    for (int i = 0; i < strlen(one); i++) {
-        one[i] = 0;
+bool checkValidUID(MFRC522::Uid *uid) {
+    for(byte i=0;i<(sizeof(validUID)/sizeof(*validUID));i++) {
+        int validBytes = 0;
+        for(byte j=0; j<4; j++) {
+            validBytes += (int) validUID[i][j] == uid->uidByte[j];
+        }
+        if(validBytes == 4) {
+            return true;
+        }
     }
+    return false;
 }
-
-
-
-///////////////////////////////////
-// MAIN
-///////////////////////////////////
-
+void printCardUID(MFRC522::Uid *uid) {
+    Serial.print(F("Card UID:"));
+    for (byte i = 0; i < uid->size; i++) {
+        if(uid->uidByte[i] < 0x10)
+            Serial.print(F(" 0"));
+        else
+            Serial.print(F(" "));
+        Serial.print(uid->uidByte[i], HEX);
+    }
+    Serial.println();
+}
 void setup() {
-    Serial.begin(9600);
-    rfid.begin(9600);
-    pinMode(RFIDResetPin, OUTPUT);
-    digitalWrite(RFIDResetPin, HIGH);
+    Serial.begin(9600);   // Initialize serial communications with the PC
+    SPI.begin();      // Init SPI bus
+    mfrc522.PCD_Init();   // Init MFRC522
+    Serial.println(F("Please scan card"));
 }
 
 void loop() {
-
-    char tagString[13];
-    int index = 0;
-    boolean reading = false;
-
-    while (rfid.available()) {
-
-        int readByte = rfid.read(); //read next available byte
-
-        if (readByte == 2) reading = true; //beginning of tag
-        if (readByte == 3) reading = false; //end of tag
-
-        if (reading && readByte != 2 && readByte != 10 && readByte != 13) {
-            //store the tag
-            tagString[index] = (char) readByte;
-            index++;
+    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
+        printCardUID(&mfrc522.uid);
+        if(checkValidUID(&mfrc522.uid)){
+            Serial.println(F("Valid Card!"));
         }
+        mfrc522.PICC_HaltA();
     }
-    printTag(tagString);
-    clearTag(tagString); //Clear the char of all value
-    resetReader(); //reset the RFID reader
 }
-
-
 
